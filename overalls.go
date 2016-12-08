@@ -52,12 +52,13 @@ const (
 	defaultIgnores = ".git,vendor"
 	outFilename    = "overalls.coverprofile"
 	pkgFilename    = "profile.coverprofile"
+	SEPARATOR      = string(os.PathSeparator)
 )
 
 var (
 	modeRegex   = regexp.MustCompile("mode: [a-z]+\n")
 	gopath      = filepath.Clean(os.Getenv("GOPATH"))
-	srcPath     = gopath + "/src/"
+	srcPath     = gopath + SEPARATOR + "src" + SEPARATOR
 	projectPath string
 	ignoreFlag  string
 	projectFlag string
@@ -78,6 +79,9 @@ func init() {
 	flag.StringVar(&ignoreFlag, "ignore", defaultIgnores, "-ignore [dir1,dir2...]: comma separated list of directory names to ignore")
 	flag.BoolVar(&debugFlag, "debug", false, "-debug [true|false]")
 	flag.BoolVar(&helpFlag, "help", false, "-help")
+
+	// Verbose logging with file name and line number
+	log.SetFlags(log.Lshortfile)
 }
 
 func parseFlags() {
@@ -134,7 +138,7 @@ func runMain(logger *log.Logger) {
 	var err error
 	var wd string
 
-	projectPath = srcPath + projectFlag + "/"
+	projectPath = srcPath + projectFlag + SEPARATOR
 
 	if err = os.Chdir(projectPath); err != nil {
 		logger.Printf("\n**invalid project path '%s'\n%s\n", projectFlag, err)
@@ -172,10 +176,12 @@ func processDIR(logger *log.Logger, wg *sync.WaitGroup, fullPath, relPath string
 	args := make([]string, 1, 1+len(flag.Args())+4)
 	args[0] = "test"
 	args = append(args, flag.Args()...)
-	args = append(args, "-covermode="+coverFlag, "-coverprofile="+pkgFilename, "-outputdir="+fullPath+"/", relPath)
-	fmt.Printf("Test args: %+v\n", args)
+	args = append(args, "-covermode="+coverFlag, "-coverprofile="+pkgFilename, "-outputdir="+fullPath+SEPARATOR, projectFlag+SEPARATOR+relPath)
+	//fmt.Printf("Test args: %+v\n", args)
+	fmt.Printf("Test package: %v\n", projectFlag+SEPARATOR+relPath)
 
 	cmd := exec.Command("go", args...)
+
 	if debugFlag {
 		logger.Println("Processing:", strings.Join(cmd.Args, " "))
 	}
@@ -195,7 +201,7 @@ func processDIR(logger *log.Logger, wg *sync.WaitGroup, fullPath, relPath string
 		logger.Fatal("ERROR:", err)
 	}
 
-	b, err := ioutil.ReadFile(relPath + "/profile.coverprofile")
+	b, err := ioutil.ReadFile(relPath + SEPARATOR + "profile.coverprofile")
 	if err != nil {
 		logger.Fatal("ERROR:", err)
 	}
@@ -219,9 +225,10 @@ func testFiles(logger *log.Logger) {
 			return filepath.SkipDir
 		}
 
-		rel = "./" + rel
+		//rel = "." + string(os.PathSeparator) + rel
+		//rel = rel
 
-		if files, err := filepath.Glob(rel + "/*_test.go"); len(files) == 0 || err != nil {
+		if files, err := filepath.Glob(rel + SEPARATOR + "*_test.go"); len(files) == 0 || err != nil {
 
 			if err != nil {
 				logger.Printf("Error checking for test files")
