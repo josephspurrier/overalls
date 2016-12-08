@@ -69,10 +69,6 @@ var (
 	ignores     = map[string]struct{}{}
 )
 
-func help() {
-	fmt.Printf(helpString)
-}
-
 func init() {
 	flag.StringVar(&projectFlag, "project", "", "-project [path]: relative to the '$GOPATH/src' directory")
 	flag.StringVar(&coverFlag, "covermode", "count", "Mode to run when testing files")
@@ -82,6 +78,14 @@ func init() {
 
 	// Verbose logging with file name and line number
 	log.SetFlags(log.Lshortfile)
+}
+func main() {
+	logger := log.New(os.Stdout, "", log.LstdFlags)
+	runMain(logger)
+}
+
+func help() {
+	fmt.Printf(helpString)
 }
 
 func parseFlags() {
@@ -125,11 +129,6 @@ func parseFlags() {
 	for _, v := range arr {
 		ignores[v] = emptyStruct
 	}
-}
-
-func main() {
-	logger := log.New(os.Stdout, "", log.LstdFlags)
-	runMain(logger)
 }
 
 func runMain(logger *log.Logger) {
@@ -220,6 +219,8 @@ func testFiles(logger *log.Logger) {
 		}
 
 		rel := strings.Replace(path, projectPath, "", 1)
+
+		log.Print("REL:", rel)
 
 		if _, ignore := ignores[rel]; ignore {
 			return filepath.SkipDir
